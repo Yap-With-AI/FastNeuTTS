@@ -1,4 +1,5 @@
 import re
+import time
 import torch
 import random
 import librosa
@@ -36,7 +37,7 @@ class TTSEngine:
     Uses LMdeploy to run maya-1 with great speed
     """
 
-    def __init__(self, memory_util = 0.1, tp = 1, enable_prefix_caching = True, quant_policy = 8):
+    def __init__(self, memory_util = 0.1, tp = 1, enable_prefix_caching = True, quant_policy = 0, model="neuphonic/neutts-air"):
         """
         Initializes the model configuration.
 
@@ -48,7 +49,7 @@ class TTSEngine:
         """
         self.tts_codec = TTSCodec()
         backend_config = TurbomindEngineConfig(cache_max_entry_count=memory_util, tp=tp, enable_prefix_caching=enable_prefix_caching, dtype='bfloat16', quant_policy=quant_policy)
-        self.pipe = pipeline("neuphonic/neutts-air", backend_config=backend_config)
+        self.pipe = pipeline(model, backend_config=backend_config)
         self.gen_config = GenerationConfig(top_p=0.95,
                               top_k=50,
                               temperature=1.0,
@@ -197,7 +198,7 @@ class TTSEngine:
         Args:
             audio_file (str): new audio file to encode and create unique user id for
         """
-        codes_str, transcript = tts_engine.encode_audio(audio_file)
+        codes_str, transcript = self.encode_audio(audio_file)
         
         user_id = random.randint(100000, 999999)
         self.stored_dict[f"{user_id}"]['transcript'] = transcript
