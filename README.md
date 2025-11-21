@@ -64,12 +64,25 @@ audio = tts_engine.batch_generate(text, [codes_str], [transcript])
 display(Audio(audio, rate=24000))
 ```
 
+Newly added: Async streaming inference that supports multiple users!
+```python
+input_text = "Wow. This place looks even better than I imagined. How did they set all this up so perfectly? The lights, the music, everything feels magical. I can't stop smiling right now."
+display_audio = True
+
+audio_file = "custom_reference_file"
+user_id = tts_engine.add_speaker(audio_file) ## this will create a unique user for this reference file
+
+async for wav in stream_audio(input_text, user_id, display_audio=display_audio):
+    ## you can manipulate wav now or just display it
+    pass
+```
+
 It is important to note that larger batch sizes lead to **larger speedups**. For single batch sizes, it is roughly 6x realtime which is still considerably faster then FastMaya while larger batch sizes are 200x realtime or more.
 
 Stars would be greatly appreciated and I would be happy to implement other features as well.
 
 ## Next priorities
-- [ ] fast streaming generation, current testing shows latencies low as 100ms
+- [x] fast streaming generation, current testing shows latencies low as 200ms
 - [ ] Multilingual models(hi, fr, de, etc.)
 - [ ] Efficent Multi speaker generation
 - [ ] Online inference using async LMdeploy
