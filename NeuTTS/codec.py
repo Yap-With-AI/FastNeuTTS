@@ -91,7 +91,9 @@ class TTSCodec:
         
         speech_ids = [int(num) for num in re.findall(r"<\|speech_(\d+)\|>", tokens)]
         codes = np.array(speech_ids, dtype=np.int32)[np.newaxis, np.newaxis, :]
-        recon = self.codec_decoder.decode_code(codes)
+        codes = torch.from_numpy(codes).to('cuda:0')
+        
+        recon = self.codec_encoder.decode_code(codes).cpu()
         if upsample:
             recon = T.Resample(24_000, 16_000)(torch.from_numpy(recon).squeeze(1))
             wav = self.upsampler.run(recon.half())
@@ -104,3 +106,24 @@ class TTSCodec:
         """clears any vram/cache, very useful"""
         gc.collect()
         torch.cuda.empty_cache()
+
+def overlap(frames: list[np.ndarray], overlap: int) -> np.ndarray:
+    if len(frames) <= 1:
+        return frames[0] if frames else np.array([])
+    
+    last = frames[-1].squeeze()
+    prev = frames[-2].squeeze()
+    
+    # Calculate Stride (Hop Size) and Overlap Segments
+    stride = prev.shape[-1] - overlap
+    
+    # Generate linear fade windows: fade-out for previous, fade-in for last
+    t = np.linspace(0.0, 1.0, overlap, dtype=last.dtype)
+    
+    # Weighted Sum (Overlap-Add)
+    weighted_sum = (prev[stride:] * (1.0 - t)) + (last[:overlap] * t)
+    
+    # Replace the overlapped start of the last frame
+    result = last.copy()
+    result[:overlap] = weighted_sum
+    return result
